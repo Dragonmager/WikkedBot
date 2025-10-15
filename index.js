@@ -59,20 +59,17 @@ client.on('messageCreate', message => {
     // Admin-only embed command
     if (command === 'embed') {
         if (!message.member.permissions.has('ADMINISTRATOR')) {
-            return message.reply("You cant do that fn!");
+            return message.reply("You can't do that!");
         }
 
-        const options = {};
-        args.forEach(arg => {
-            const [key, ...value] = arg.split('=');
-            if (key && value.length) options[key.toLowerCase()] = value.join('=');
-        });
+        // Combine all args and split by |
+        const [title, description, color, image] = args.join(' ').split('|').map(x => x?.trim());
 
         const embed = {
-            color: options.color ? parseInt(options.color.replace('#',''), 16) : 0x0099ff,
-            title: options.title || null,
-            description: options.description || null,
-            image: options.image ? { url: options.image } : null,
+            color: color ? parseInt(color.replace('#', ''), 16) : 0x0099ff,
+            title: title || null,
+            description: description || null,
+            image: image ? { url: image } : null,
             timestamp: new Date(),
             footer: { text: `Sent by ${message.author.tag}` }
         };
@@ -112,7 +109,7 @@ client.on('messageCreate', message => {
         message.channel.send(`Server name: ${message.guild.name}\nTotal members: ${message.guild.memberCount}`);
     }
 
-    // Moderation commands
+    // Moderation commands (requires permissions)
     else if (command === 'kick') {
         const member = message.mentions.members.first();
         if (!member) return message.reply('Mention a user to kick!');
@@ -138,4 +135,3 @@ client.on('messageCreate', message => {
 
 // Login your bot
 client.login(process.env.DISCORD_TOKEN);
-
