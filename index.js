@@ -43,6 +43,36 @@ client.once('ready', () => {
 
 // Message event
 client.on('messageCreate', message => {
+   else if (command === 'embed') {
+    // Check if the user has the "ADMINISTRATOR" permission
+    if (!message.member.permissions.has('ADMINISTRATOR')) {
+        return message.reply("You don't have permission to use this command!");
+    }
+
+    // Parse arguments for embed options
+    // Example usage:
+    // !embed title=Hello color=#ff0000 image=https://i.imgur.com/example.png description=This is a test
+    const options = {};
+    args.forEach(arg => {
+        const [key, ...value] = arg.split('=');
+        if (key && value.length) options[key.toLowerCase()] = value.join('=');
+    });
+
+    // Build the embed
+    const embed = {
+        color: options.color || 0x0099ff, // default blue
+        title: options.title || null,
+        description: options.description || null,
+        image: options.image ? { url: options.image } : null,
+        timestamp: new Date(),
+        footer: { text: `Sent by ${message.author.tag}` }
+    };
+
+    // Send the embed
+    message.channel.send({ embeds: [embed] });
+}
+
+
     if (message.author.bot) return;
     if (!message.content.startsWith(prefix)) {
         addXP(message.author.id); // XP/coins even for normal messages
