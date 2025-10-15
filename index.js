@@ -112,7 +112,7 @@ client.on('messageCreate', message => {
         message.channel.send(`Server name: ${message.guild.name}\nTotal members: ${message.guild.memberCount}`);
     }
 
-    // Moderation commands (requires permissions)
+    // Moderation commands
     else if (command === 'kick') {
         const member = message.mentions.members.first();
         if (!member) return message.reply('Mention a user to kick!');
@@ -138,3 +138,4 @@ client.on('messageCreate', message => {
 
 // Login your bot
 client.login(process.env.DISCORD_TOKEN);
+
