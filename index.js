@@ -1,5 +1,5 @@
-const express = require('express'); // Add this
 require('dotenv').config();
+const express = require('express'); // For Render port binding
 const fs = require('fs');
 const { Client, GatewayIntentBits } = require('discord.js');
 
@@ -43,7 +43,7 @@ client.once('ready', () => {
 });
 
 // Message event
-client.on('messageCreate', message => {
+client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
     // XP for normal messages
@@ -57,77 +57,7 @@ client.on('messageCreate', message => {
 
     addXP(message.author.id);
 
-    else if (command === 'embed') {
-    if (!message.member.permissions.has('Administrator')) {
-        return message.reply("You don't have permission to use this command!");
-    }
-
-    const filter = m => m.author.id === message.author.id;
-
-    // Step 1: Title
-    message.channel.send("📝 What should the **title** be?");
-    message.channel.awaitMessages({ filter, max: 1, time: 30000 })
-        .then(collected1 => {
-            const title = collected1.first().content;
-
-            // Step 2: Description
-            message.channel.send("💬 What should the **description** be?");
-            return message.channel.awaitMessages({ filter, max: 1, time: 60000 })
-                .then(collected2 => {
-                    const description = collected2.first().content;
-
-                    // Step 3: Color
-                    message.channel.send("🎨 What **color** should the embed be? (example: #ff0000 or blue)");
-                    return message.channel.awaitMessages({ filter, max: 1, time: 30000 })
-                        .then(collected3 => {
-                            let colorInput = collected3.first().content.trim();
-                            let color;
-
-                            // Convert named colors or hex
-                            if (colorInput.startsWith("#")) {
-                                color = parseInt(colorInput.replace('#', ''), 16);
-                            } else {
-                                // Try to parse common names
-                                const namedColors = {
-                                    red: 0xff0000,
-                                    blue: 0x0099ff,
-                                    green: 0x00ff00,
-                                    purple: 0x800080,
-                                    yellow: 0xffff00,
-                                    orange: 0xffa500,
-                                    pink: 0xff69b4
-                                };
-                                color = namedColors[colorInput.toLowerCase()] || 0x0099ff;
-                            }
-
-                            // Step 4: Image
-                            message.channel.send("🖼️ Optional: send an image URL or type `none` to skip.");
-                            return message.channel.awaitMessages({ filter, max: 1, time: 30000 })
-                                .then(collected4 => {
-                                    const imageInput = collected4.first().content;
-                                    const image = imageInput.toLowerCase() !== 'none' ? imageInput : null;
-
-                                    // Build and send embed
-                                    const embed = {
-                                        color,
-                                        title,
-                                        description,
-                                        image: image ? { url: image } : null,
-                                        timestamp: new Date(),
-                                        footer: { text: `Sent by ${message.author.tag}` }
-                                    };
-
-                                    message.channel.send({ embeds: [embed] });
-                                });
-                        });
-                });
-        })
-        .catch(() => message.channel.send("⏰ You took too long! Try `!embed` again."));
-}
-
-    }
-
-    // Basic commands
+    // BASIC COMMANDS
     if (command === 'ping') message.channel.send('Pong!');
     else if (command === 'help') {
         message.channel.send(
@@ -159,7 +89,56 @@ client.on('messageCreate', message => {
         message.channel.send(`Server name: ${message.guild.name}\nTotal members: ${message.guild.memberCount}`);
     }
 
-    // Moderation commands (requires permissions)
+    // ADMIN EMBED COMMAND
+    else if (command === 'embed') {
+        if (!message.member.permissions.has('ADMINISTRATOR')) {
+            return message.reply("You can't use this command!");
+        }
+
+        const filter = m => m.author.id === message.author.id;
+
+        try {
+            // Step 1: Title
+            await message.channel.send("📝 What should the **title** be?");
+            const collected1 = await message.channel.awaitMessages({ filter, max: 1, time: 30000 });
+            const title = collected1.first().content;
+
+            // Step 2: Description
+            await message.channel.send("💬 What should the **description** be?");
+            const collected2 = await message.channel.awaitMessages({ filter, max: 1, time: 60000 });
+            const description = collected2.first().content;
+
+            // Step 3: Color
+            await message.channel.send("🎨 What **color** should the embed be? (example: #ff0000 or blue)");
+            const collected3 = await message.channel.awaitMessages({ filter, max: 1, time: 30000 });
+            let colorInput = collected3.first().content.trim();
+            let color;
+            const namedColors = { red: 0xff0000, blue: 0x0099ff, green: 0x00ff00, purple: 0x800080, yellow: 0xffff00, orange: 0xffa500, pink: 0xff69b4 };
+            color = colorInput.startsWith("#") ? parseInt(colorInput.replace('#',''), 16) : (namedColors[colorInput.toLowerCase()] || 0x0099ff);
+
+            // Step 4: Image
+            await message.channel.send("🖼️ Optional: send an image URL or type `none` to skip.");
+            const collected4 = await message.channel.awaitMessages({ filter, max: 1, time: 30000 });
+            const imageInput = collected4.first().content;
+            const image = imageInput.toLowerCase() !== 'none' ? imageInput : null;
+
+            // Build and send embed
+            const embed = {
+                color,
+                title,
+                description,
+                image: image ? { url: image } : null,
+                timestamp: new Date(),
+                footer: { text: `Sent by ${message.author.tag}` }
+            };
+            message.channel.send({ embeds: [embed] });
+
+        } catch {
+            return message.channel.send("⏰ You took too long! Try `!embed` again.");
+        }
+    }
+
+    // MODERATION COMMANDS
     else if (command === 'kick') {
         const member = message.mentions.members.first();
         if (!member) return message.reply('Mention a user to drag out the trap!');
@@ -182,13 +161,12 @@ client.on('messageCreate', message => {
             .catch(() => message.reply('Cannot delete messages'));
     }
 });
-// tiny web server so Render sees an open port
+
+// Tiny web server for Render
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 app.get('/', (req, res) => res.send('WikkedBot is running'));
 app.listen(PORT, () => console.log(`Web server running on port ${PORT}`));
 
-
-// Login your bot
+// Login bot
 client.login(process.env.DISCORD_TOKEN);
